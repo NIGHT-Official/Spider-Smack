@@ -2,7 +2,7 @@ extends Area3D
 
 var patches = []
 var crawl_speed = 0.3
-var leap_speed = 3.0
+var leap_speed = 1.2
 var speed = 0.3
 var patch
 var target = Vector3.ZERO
@@ -18,12 +18,12 @@ var bend = 0.5
 var max_bend = 0.5
 var facing = 0.0
 var strike_range = 0.8
-var strike_after = 4.0
+var strike_after = 6.0
 var strike_damage = 20.0
 var lunge_speed = 4.0
 var close_time = 0.0
 var striking = false
-var hide_after = 6.0
+var hide_after = 10.0
 var retreat_speed = 1.0
 var seen_time = 0.0
 var links = {}
@@ -33,14 +33,25 @@ var final_spot = Vector3.ZERO
 var final_normal = Vector3.UP
 var goal_patch
 var far_patches = []
-var seek_chance = 0.8
-var seek_speed = 0.5
+var seek_chance = 0.5
+var seek_speed = 0.3
+var leaping = false
+var leap_from = Vector3.ZERO
+var leap_to = Vector3.ZERO
+var leap_t = 0.0
+var leap_length = 1.0
+var leap_height = 0.0
+var jump_arc = 0.35
+var jump_max = 0.5
+var edge_cache = {}
+var on_patch
 
 func _ready():
 	patches = get_parent().get_node("Patches").get_children()
 	for each in patches:
 		each.hide()
 	patch = patches[0]
+	on_patch = patch
 	position = next_spot()
 	target = position
 	build_links()
@@ -73,12 +84,43 @@ func wander():
 	target = next_spot()
 	face(target - position, normal)
 
+func edge_between(a_patch, b_patch, spot):
+	var best = null
+	var best_cost = 1000.0
+	for p in edge_cache[a_patch]:
+		for q in edge_cache[b_patch]:
+			if p.distance_to(q) < link_distance:
+				var mid = (p + q) / 2
+				var cost = position.distance_to(mid) + mid.distance_to(spot)
+				if cost < best_cost:
+					best_cost = cost
+					best = mid
+	return best
+
 func travel(spot, old_normal):
-	var push = min(position.distance_to(spot) * bend, max_bend)
-	var corner = (old_normal + normal) * (1.0 - old_normal.dot(normal))
-	target = (position + spot) / 2 + corner * push
+	var edge = null
+	if on_patch != patch and edge_cache.has(on_patch):
+		edge = edge_between(on_patch, patch, spot)
+	if edge == null:
+		var push = min(position.distance_to(spot) * bend, max_bend)
+		var corner = (old_normal + normal) * (1.0 - old_normal.dot(normal))
+		target = (position + spot) / 2 + corner * push
+	else:
+		target = edge + (old_normal + normal).normalized() * lift
 	route = [spot]
 	face(target - position, old_normal)
+
+func start_leap(spot, old_normal):
+	leaping = true
+	leap_from = position
+	leap_to = spot
+	leap_t = 0.0
+	leap_length = max(position.distance_to(spot), 0.05)
+	leap_height = min(leap_length * jump_arc, jump_max)
+	route = []
+	path = []
+	face(spot - position, old_normal)
+	wait = 0.0
 
 func leap():
 	striking = false
@@ -86,9 +128,7 @@ func leap():
 	seen_time = 0.0
 	var old_normal = normal
 	patch = far_patches.pick_random()
-	travel(next_spot(), old_normal)
-	speed = leap_speed
-	wait = 0.0
+	start_leap(next_spot(), old_normal)
 
 func hop():
 	var old = patch
@@ -121,9 +161,11 @@ func lunge(camera, delta):
 		get_parent().hurt(strike_damage)
 		camera.bump(0.6)
 		striking = false
+		leaping = false
 		close_time = 0.0
 		patch = far_patches.pick_random()
 		position = next_spot()
+		on_patch = patch
 		target = position
 		route = []
 		wait = 1.0
@@ -176,12 +218,13 @@ func touches(a, b):
 func build_links():
 	for each in patches:
 		links[each] = []
+		edge_cache[each] = edge_points(each)
 	for first in patches:
-		var mine = edge_points(first)
+		var mine = edge_cache[first]
 		for second in patches:
 			if second == first or links[first].has(second):
 				continue
-			if touches(mine, edge_points(second)):
+			if touches(mine, edge_cache[second]):
 				links[first].append(second)
 				links[second].append(first)
 
@@ -253,33 +296,35 @@ func find_far():
 func jump_to(goal):
 	var old_normal = normal
 	patch = goal
-	route = []
-	travel(next_spot(), old_normal)
-	speed = leap_speed
-	wait = 0.0
+	start_leap(next_spot(), old_normal)
 
 func seek():
 	if goal_patch == null:
 		wander()
 		return
 	var step = patch
+	var crossing = false
 	if goal_patch != patch:
 		var way = find_path(patch, goal_patch)
 		if way.size() == 0:
 			jump_to(goal_patch)
 			return
 		step = way[0]
+		crossing = true
 	var old_normal = normal
 	var head = get_parent().get_node("Head").position
+	var anchor = head
+	if crossing:
+		anchor = position
 	patch = step
 	var best = next_spot()
 	var best_normal = normal
-	for i in 12:
+	for i in 30:
 		var spot = next_spot()
-		if spot.distance_to(head) < best.distance_to(head):
+		if spot.distance_to(anchor) < best.distance_to(anchor):
 			best = spot
 			best_normal = normal
-	if step == goal_patch and best.distance_to(head) >= position.distance_to(head):
+	if not crossing and best.distance_to(head) >= position.distance_to(head):
 		return
 	normal = best_normal
 	route = []
@@ -301,11 +346,22 @@ func _process(delta):
 		close_time = 0.0
 	if seen:
 		seen_time += delta
-		if seen_time >= hide_after and not striking:
+		if seen_time >= hide_after and not striking and not leaping:
 			retreat()
 	else:
 		seen_time = 0.0
 	basis = basis.orthonormalized().slerp(want, min(turn_speed * delta, 1.0)).orthonormalized()
+	if leaping:
+		leap_t += leap_speed * delta / leap_length
+		var along = min(leap_t, 1.0)
+		position = leap_from.lerp(leap_to, along) + Vector3.UP * leap_height * 4.0 * along * (1.0 - along)
+		if leap_t >= 1.0:
+			leaping = false
+			on_patch = patch
+			position = leap_to
+			target = position
+			wait = 0.3
+		return
 	if wait > 0.0:
 		wait -= delta
 		return
@@ -315,6 +371,7 @@ func _process(delta):
 			target = route.pop_front()
 			face(target - position, normal)
 			return
+		on_patch = patch
 		if path.size() > 0:
 			follow_path()
 			return

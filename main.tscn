@@ -248,9 +248,11 @@ roughness_texture = SubResource("NoiseTexture2D_0xm2m")
 environment = SubResource("Environment_0xm2m")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.8660254, 0.3535534, -0.3535534, 0, 0.7071068, 0.7071068, 0.5, -0.61237246, 0.61237246, -8.7006, -0.7245798, 1.2912283)
-light_color = Color(1.2681451, 1.1537987, 0.9095522, 1)
-light_energy = 0.5
+transform = Transform3D(-0.88974434, -0.36011806, 0.2804821, -0.026516927, 0.6542137, 0.7558447, -0.4556886, 0.6650709, -0.5916321, -10.828969, 2.796279, -0.344208)
+light_color = Color(1.2656939, 1.1451938, 0.99842924, 1)
+light_energy = 1.037
+light_volumetric_fog_energy = 16.0
+light_specular = 0.0
 shadow_enabled = true
 
 [node name="Track" type="Path3D" parent="."]
