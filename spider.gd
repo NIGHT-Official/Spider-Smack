@@ -384,6 +384,19 @@ func _process(delta):
 			wander()
 		wait = randf_range(0.2, 1.5)
 
-func _input_event(_camera, event, _position, _normal, _shape):
-	if event.is_action_released("ready"):
-			leap()
+func hand_hits():
+	var hand = get_tree().root.get_node("Main/CanvasLayer/Hand")
+	var camera = get_parent().get_node("Head/Camera3D")
+	for step in [-1.0, 0.0, 1.0]:
+		var point = global_position + global_transform.basis.z * 0.03 * step
+		if camera.is_position_behind(point):
+			continue
+		var screen = camera.unproject_position(point)
+		var side = camera.unproject_position(point + camera.global_transform.basis.x * 0.017)
+		if hand.touches(screen, screen.distance_to(side)):
+			return true
+	return false
+
+func _input(event):
+	if event.is_action_released("ready") and is_seen(global_position) and hand_hits():
+		leap()

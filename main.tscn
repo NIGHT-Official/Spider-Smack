@@ -1,4 +1,4 @@
-[gd_scene load_steps=74 format=3 uid="uid://cfwtu5l5noi21"]
+[gd_scene load_steps=75 format=3 uid="uid://cfwtu5l5noi21"]
 
 [ext_resource type="Script" uid="uid://c3c8n6eom81p7" path="res://track.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bjtwpcokcftu7" path="res://follower.gd" id="1_ig7tw"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://blmyphf6iw1q8" path="res://camera_shake.gd" id="7_5vw27"]
 [ext_resource type="Script" uid="uid://1iyxcj4y21se" path="res://health_bar.gd" id="9_kek77"]
 [ext_resource type="Script" uid="uid://b25ugn01hr7q1" path="res://flash.gd" id="10_4c57u"]
+[ext_resource type="Script" uid="uid://kb3yy1syggfq" path="res://hand.gd" id="11_efxa6"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_7dm0k"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -653,3 +654,6 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.9882353, 0, 0, 0)
 script = ExtResource("10_4c57u")
+
+[node name="Hand" type="Node2D" parent="CanvasLayer"]
+script = ExtResource("11_efxa6")
