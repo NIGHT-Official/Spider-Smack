@@ -16,13 +16,18 @@ func _process(delta):
 	position.x -= sin(angle) * follower.speed * delta
 	position.x = clamp(position.x, -road_edge, road_edge)
 
-func hurt(amount):
+func hurt(amount, crash = true):
 	health -= amount
 	health = max(health, 0.0)
 	get_node("/root/Main/CanvasLayer/Flash").flash(amount / 20.0)
 	print("Health: ", health)
+	if crash:
+		get_node("/root/Main/Crash").thud(amount)
 	if health <= 0.0:
-		get_tree().reload_current_scene()
+		get_node("/root/Main/CanvasLayer/GameOver").show_over()
+
+func heal(amount):
+	health = min(health + amount, 100.0)
 
 func drain(amount):
 	health = max(health - amount, 0.0)

@@ -1,6 +1,6 @@
 extends Node2D
 
-var radius = 12.0
+var radius = 14.0
 var squash = 1.6
 
 func _process(_delta):

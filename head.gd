@@ -12,10 +12,11 @@ var edge_margin = 40.0
 var edge_speed = 3.0
 var turn = 0.0
 var tilt = 0.0
+var sensitivity = 1.0
 
 func aim(step):
-		turn -= step.x * degrees_per_pixel
-		tilt -= step.y * degrees_per_pixel
+		turn -= step.x * degrees_per_pixel * sensitivity
+		tilt -= step.y * degrees_per_pixel * sensitivity
 		turn = clamp(turn, -max_turn, max_turn)
 		var down_limit = lerp(max_down, min_down, abs(turn) / max_turn)
 		tilt = clamp(tilt, -down_limit, max_up)

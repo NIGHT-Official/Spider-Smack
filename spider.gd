@@ -1,7 +1,7 @@
 extends Area3D
 
 var patches = []
-var crawl_speed = 0.3
+var crawl_speed = 0.25
 var leap_speed = 1.2
 var speed = 0.3
 var patch
@@ -18,14 +18,16 @@ var bend = 0.5
 var max_bend = 0.5
 var facing = 0.0
 var strike_range = 0.8
-var strike_after = 6.0
-var strike_damage = 20.0
+var strike_after = 12.0
+var strike_damage = 5.0
 var lunge_speed = 4.0
 var close_time = 0.0
 var striking = false
-var hide_after = 10.0
+var hide_after = 13.0
 var retreat_speed = 1.0
 var seen_time = 0.0
+var growth = 1.08
+var damage_step = 1.25
 var links = {}
 var link_distance = 0.1
 var path = []
@@ -33,8 +35,8 @@ var final_spot = Vector3.ZERO
 var final_normal = Vector3.UP
 var goal_patch
 var far_patches = []
-var seek_chance = 0.5
-var seek_speed = 0.3
+var seek_chance = 0.38
+var seek_speed = 0.25
 var leaping = false
 var leap_from = Vector3.ZERO
 var leap_to = Vector3.ZERO
@@ -45,6 +47,7 @@ var jump_arc = 0.35
 var jump_max = 0.5
 var edge_cache = {}
 var on_patch
+
 
 func _ready():
 	patches = get_parent().get_node("Patches").get_children()
@@ -142,6 +145,18 @@ func hop():
 	patch = old
 	wander()
 
+func grow():
+	crawl_speed *= growth
+	seek_speed *= growth
+	retreat_speed *= growth
+	lunge_speed *= growth
+	leap_speed *= growth
+	strike_after /= growth
+	hide_after /= growth
+	seek_chance = min(seek_chance * growth, 0.9)
+	hop_chance = min(hop_chance * growth, 0.9)
+	strike_damage += damage_step
+
 func is_seen(point):
 	var camera = get_parent().get_node("Head/Camera3D")
 	if not camera.is_position_in_frustum(point):
@@ -158,7 +173,7 @@ func lunge(camera, delta):
 	var toward = Basis.looking_at(camera.global_position - global_position, Vector3.UP)
 	global_transform.basis = global_transform.basis.orthonormalized().slerp(toward, min(turn_speed * delta, 1.0)).orthonormalized()
 	if global_position.distance_to(aim) < 0.02:
-		get_parent().hurt(strike_damage)
+		get_parent().hurt(strike_damage, false)
 		camera.bump(0.6)
 		striking = false
 		leaping = false
